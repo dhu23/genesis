@@ -17,15 +17,15 @@ class TestDrawDown(object):
 
     def test_good_drawdown_construction(self):
         dd = Drawdown(self.DATA_1, self.DATA_5)
-        assert -4.5 == pytest.approx(dd.drawdown_value, abs=0.001) 
+        assert -4.5 == pytest.approx(dd.drawdown_depth, abs=0.001) 
         assert 4 == dd.length
 
         assert not dd.extend(self.DATA_10) # no update to drawdown value
-        assert -4.5 == pytest.approx(dd.drawdown_value, abs=0.001)
+        assert -4.5 == pytest.approx(dd.drawdown_depth, abs=0.001)
         assert 9 == dd.length
 
         assert dd.extend(self.DATA_12)
-        assert -5.5 == pytest.approx(dd.drawdown_value, abs=0.001)
+        assert -5.5 == pytest.approx(dd.drawdown_depth, abs=0.001)
         assert 11 == dd.length
 
         with pytest.raises(Exception):
@@ -35,7 +35,7 @@ class TestDrawDown(object):
             dd.extend(self.DATA_5)
 
         # extension exceptions don't change internal state
-        assert -5.5 == pytest.approx(dd.drawdown_value, abs=0.001)
+        assert -5.5 == pytest.approx(dd.drawdown_depth, abs=0.001)
         assert 11 == dd.length
         
 
@@ -56,8 +56,8 @@ class TestDrawDownTracker(object):
         tracker = DrawDownTracker()
         assert not tracker.drawdowns()
         assert not tracker.in_drawdown()
-        assert not tracker.max_drawdowns()
-        assert not tracker.longest_drawdowns()
+        assert not tracker.max_drawdown_value()
+        assert not tracker.longest_drawdown_length()
         assert tracker.data_point_count() == 0
 
     # make point by point assertion for such sequence of data
@@ -77,15 +77,111 @@ class TestDrawDownTracker(object):
     #      +-----------------------------
     #      0         5        10 
     # There are two drawdown periods:
-    # 1. from 11 down to 6
+    # 1. from 11 down to 6 (closed)
+    # 2. from 11.5 down to 11 (not closed)
     def test_tracker_state(self):
         tracker = DrawDownTracker()
-        tracker.update(10)
-
-
-    
-
         
+        tracker.update(10)
+        assert not tracker.drawdowns()
+        assert not tracker.in_drawdown()
+        assert not tracker.max_drawdown_value()
+        assert not tracker.longest_drawdown_length()
+        assert tracker.data_point_count() == 1
+
+        tracker.update(11)
+        assert not tracker.drawdowns()
+        assert not tracker.in_drawdown()
+        assert not tracker.max_drawdown_value()
+        assert not tracker.longest_drawdown_length()
+        assert tracker.data_point_count() == 2
+
+        HIGH_WATER_MARK_1 = DataPoint(1, 11)
+
+        tracker.update(10.5)
+        current_drawdown = Drawdown(HIGH_WATER_MARK_1, DataPoint(2, 10.5))
+        assert tracker.drawdowns() == [current_drawdown]
+        assert tracker.in_drawdown()
+        assert tracker.max_drawdown_value() == -0.5
+        assert tracker.longest_drawdown_length() == 1
+        assert tracker.data_point_count() == 3
+    
+        tracker.update(8.5)
+        current_drawdown = Drawdown(HIGH_WATER_MARK_1, DataPoint(3, 8.5))
+        assert tracker.drawdowns() == [current_drawdown]
+        assert tracker.in_drawdown()
+        assert tracker.max_drawdown_value() == -2.5
+        assert tracker.longest_drawdown_length() == 2
+        assert tracker.data_point_count() == 4
+
+        tracker.update(9.5) # doesn't change drawdown depth
+        drawdowns = tracker.drawdowns()
+        assert len(drawdowns) == 1
+        assert drawdowns[0].start == HIGH_WATER_MARK_1
+        assert drawdowns[0].end == DataPoint(4, 9.5)
+        assert drawdowns[0].drawdown_depth == -2.5
+        assert drawdowns[0].length == 3
+        assert tracker.in_drawdown()
+        assert tracker.max_drawdown_value() == -2.5
+        assert tracker.longest_drawdown_length() == 3
+        assert tracker.data_point_count() == 5
+
+        tracker.update(6.0)
+        drawdowns = tracker.drawdowns()
+        assert len(drawdowns) == 1
+        assert drawdowns[0].start == HIGH_WATER_MARK_1
+        assert drawdowns[0].end == DataPoint(5, 6.0)
+        assert drawdowns[0].drawdown_depth == -5.0
+        assert drawdowns[0].length == 4
+        assert tracker.in_drawdown()
+        assert tracker.max_drawdown_value() == -5.0
+        assert tracker.longest_drawdown_length() == 4
+        assert tracker.data_point_count() == 6
+
+        tracker.update(7.0)
+        tracker.update(8.0)
+        tracker.update(9.0)
+        tracker.update(10.0)
+        tracker.update(11.0)
+        drawdowns = tracker.drawdowns()
+        assert len(drawdowns) == 1
+        assert drawdowns[0].start == HIGH_WATER_MARK_1
+        assert drawdowns[0].end == DataPoint(10, 11.0)
+        assert drawdowns[0].drawdown_depth == -5.0
+        assert drawdowns[0].length == 9
+        assert tracker.in_drawdown()
+        assert tracker.max_drawdown_value() == -5.0
+        assert tracker.longest_drawdown_length() == 9
+        assert tracker.data_point_count() == 11
+
+        HIGH_WATER_MARK_2 = DataPoint(11, 11.5)
+
+        # recovered from a drawdown
+        tracker.update(11.5)
+        drawdowns = tracker.drawdowns()
+        assert len(drawdowns) == 1
+        assert not tracker.in_drawdown()
+        assert tracker.max_drawdown_value() == -5.0
+        assert tracker.longest_drawdown_length() == 9
+        assert tracker.data_point_count() == 12
+
+        tracker.update(11)
+        tracker.update(11)
+        drawdowns = tracker.drawdowns()
+        assert len(drawdowns) == 2
+        assert drawdowns[0].start == HIGH_WATER_MARK_1
+        assert drawdowns[0].end == DataPoint(10, 11.0)
+        assert drawdowns[0].drawdown_depth == -5.0
+        assert drawdowns[0].length == 9
+        assert drawdowns[1].start == HIGH_WATER_MARK_2
+        assert drawdowns[1].end == DataPoint(13, 11)
+        assert drawdowns[1].drawdown_depth == -0.5
+        assert drawdowns[1].length == 2
+        assert tracker.in_drawdown()
+        assert tracker.max_drawdown_value() == -5.0
+        assert tracker.longest_drawdown_length() == 9
+        assert tracker.data_point_count() == 14
+
 
     def test_sequence_1(self):
         pass

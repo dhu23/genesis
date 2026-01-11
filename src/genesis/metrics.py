@@ -22,7 +22,7 @@ class Drawdown:
     '''
     start: DataPoint
     end: DataPoint
-    _drawdown_value: int | float = field(init=False, repr=False)
+    _drawdown_depth: int | float = field(init=False, repr=False)
 
     def __post_init__(self):
         if self.start.value < self.end.value:
@@ -33,7 +33,7 @@ class Drawdown:
             raise ValueError(
                 f'start index ({self.start.index} needs to come before end index {self.end.index})'
             )
-        self._drawdown_value = self.end.value - self.start.value 
+        self._drawdown_depth = self.end.value - self.start.value 
 
     def extend(self, data_point: DataPoint) -> bool:
         if data_point.value > self.start.value:
@@ -47,8 +47,8 @@ class Drawdown:
         self.end = data_point
         # update drawdown statistics if the new observation trends down lower
         _drawdown_candidate = data_point.value - self.start.value
-        if _drawdown_candidate < self._drawdown_value:
-            self._drawdown_value = _drawdown_candidate
+        if _drawdown_candidate < self._drawdown_depth:
+            self._drawdown_depth = _drawdown_candidate
             return True
         else:
             return False
@@ -58,8 +58,8 @@ class Drawdown:
         return self.end.index - self.start.index
     
     @property
-    def drawdown_value(self):
-        return self._drawdown_value
+    def drawdown_depth(self):
+        return self._drawdown_depth
 
 
 class DrawDownTracker(object):
@@ -91,40 +91,21 @@ class DrawDownTracker(object):
         self._index = 0
 
         # for tracking drawdown statistics
-        self._max_drawdowns: list[Drawdown] = []
-        self._longest_drawdowns: list[Drawdown] = []
+        self._max_drawdown_value: int | float | None = None
+        self._longest_drawdown_length: int | None = None
 
     def _update_statistics(self, drawdown: Drawdown) -> None:
-        self._update_max_drawdowns(drawdown)
-        self._update_longest_drawdowns(drawdown)
+        self._update_max_drawdown_value(drawdown.drawdown_depth)
+        self._update_longest_drawdown_length(drawdown.length)
 
-    def _update_max_drawdowns(self, drawdown: Drawdown) -> None:
-        if not self._max_drawdowns:
-            self._max_drawdowns.append(drawdown)
-            return 
-        
-        current_max = self._max_drawdowns[-1].drawdown_value
-        if drawdown.drawdown_value == current_max:
-            self._max_drawdowns.append(drawdown)
-        elif drawdown.drawdown_value > current_max:
-            self._max_drawdowns = [drawdown]
-        else:
-            # when the new one is smaller than current max, drop it
-            pass
+    def _update_max_drawdown_value(self, new_drawdown_value: int | float) -> None:
+        # more negative value would get recorded
+        if not self._max_drawdown_value or self._max_drawdown_value > new_drawdown_value:
+            self._max_drawdown_value = new_drawdown_value
 
-    def _update_longest_drawdowns(self, drawdown: Drawdown) -> None:
-        if not self._longest_drawdowns:
-            self._longest_drawdowns.append(drawdown)
-            return
-        
-        current_longest = self._longest_drawdowns[-1].length
-        if drawdown.length == current_longest:
-            self._longest_drawdowns.append(drawdown)
-        elif drawdown.length > current_longest:
-            self._longest_drawdowns = [drawdown]
-        else:
-            # when the new one is shorter than the current longest, drop it
-            pass    
+    def _update_longest_drawdown_length(self, new_drawdown_length: int) -> None:
+        if not self._longest_drawdown_length or self._longest_drawdown_length < new_drawdown_length:
+            self._longest_drawdown_length = new_drawdown_length
         
     def update(self, value: int | float):
         '''
@@ -174,12 +155,12 @@ class DrawDownTracker(object):
     
     def in_drawdown(self):
         return self._in_drawdown
+    
+    def max_drawdown_value(self) -> int | float | None:
+        return self._max_drawdown_value
 
-    def max_drawdowns(self) -> list[Drawdown]:
-        return self._max_drawdowns
-
-    def longest_drawdowns(self) -> list[Drawdown]:
-        return self._longest_drawdowns
+    def longest_drawdown_length(self) -> int | None:
+        return self._longest_drawdown_length
     
     def data_point_count(self) -> int:
         '''
