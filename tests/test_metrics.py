@@ -183,5 +183,34 @@ class TestDrawDownTracker(object):
         assert tracker.data_point_count() == 14
 
 
-    def test_sequence_1(self):
-        pass
+    def test_increasing_sequence(self):
+        tracker = DrawDownTracker()
+        for i, x in enumerate(self.SEQUENCE_1):
+            tracker.update(x)
+        
+            # no drawdown
+            assert not tracker.drawdowns()
+            assert not tracker.in_drawdown()
+            assert not tracker.max_drawdown_value()
+            assert not tracker.longest_drawdown_length()
+            assert tracker.data_point_count() == i+1
+
+    def test_decreasing_sequence(self):
+        tracker = DrawDownTracker()
+        for i, x in enumerate(self.SEQUENCE_2):
+            tracker.update(x)
+
+            # other than the first one, all other data points are in drawdown
+            if i == 0:
+                assert not tracker.drawdowns()
+                assert not tracker.in_drawdown()
+                assert not tracker.max_drawdown_value()
+                assert not tracker.longest_drawdown_length()    
+            else:
+                assert tracker.drawdowns()
+                assert tracker.in_drawdown()
+                assert tracker.max_drawdown_value() == x - self.SEQUENCE_2[0]
+                assert tracker.longest_drawdown_length() == i
+
+            assert tracker.data_point_count() == i+1
+
