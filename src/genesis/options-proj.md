@@ -38,13 +38,14 @@ How should the API behave when the input price is bad?
 ## project 3: build a mini option chain
 Generate an artificial option market
 For example 
-Expiry  |  Strike  |   Call IV   |   Put IV
-1M      |   90     |   ...       |   ...
-1M      |   95     |   ...       |   ...
-1M      |  100     |   ...       |   ...
-1M      |  105     |   ...       |   ...
-1M      |  110     |   ...       |   ...
-3M      |   90     |   ...       |   ...
+|  Expiry  |  Strike  |  Call IV   |  Put IV  |
+|----------|----------|------------|----------|
+|  1M      |   90     |  ...       |  ...     |
+|  1M      |   95     |  ...       |  ...     |
+|  1M      |  100     |  ...       |  ...     |
+|  1M      |  105     |  ...       |  ...     |
+|  1M      |  110     |  ...       |  ...     |
+|  3M      |   90     |  ...       |  ...     |
 
 Then 
 1. generate prices from a known volatility model
