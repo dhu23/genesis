@@ -23,7 +23,7 @@ def test_gbm_statistical_property():
     N = 6400
 
     # sampling 10000 data point from population
-    log_returns = gbm.log_returns(gbm_params, N, dt, rng)
+    log_returns = gbm.log_returns(gbm_params, (N,), dt, rng)
     sample_mean = np.mean(log_returns)
     sample_std = np.std(log_returns)
     print(f'sample mean={sample_mean}, std={sample_std}')
@@ -36,7 +36,7 @@ def test_gbm_statistical_property():
 
     M = 2500
     sample_means = [
-        np.mean(gbm.log_returns(gbm_params, N, dt, np.random.default_rng(i)))
+        np.mean(gbm.log_returns(gbm_params, (N,), dt, np.random.default_rng(i)))
         for i in range(M)
     ]
 

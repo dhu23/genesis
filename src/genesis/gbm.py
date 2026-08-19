@@ -5,6 +5,7 @@ Geometric Brownian Motion (GBM)
 from dataclasses import dataclass
 import math
 import numpy as np
+from typing import Tuple
 
 
 @dataclass(frozen=True)
@@ -23,7 +24,7 @@ def gbm_log_return_std(gbm_params: GBMParameters, dt: float) -> float:
 
 def log_returns(
         gbm_params: GBMParameters, 
-        n: int, 
+        shape: Tuple[int, ...], 
         dt: float, 
         rng: np.random.Generator
 ) -> np.ndarray:
@@ -38,5 +39,5 @@ def log_returns(
     return rng.normal(
         loc=gbm_log_return_mean(gbm_params, dt),
         scale=gbm_log_return_std(gbm_params, dt),
-        size=n,
+        size=shape,
     )

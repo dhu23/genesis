@@ -1,2 +1,2 @@
 # genesis
-math lib
+Math and quant lib
