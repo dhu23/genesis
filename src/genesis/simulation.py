@@ -21,6 +21,12 @@ def fill_first_n_dims(val: float, arr: np.ndarray, n: int)-> np.ndarray:
     return np.ones(new_shape) * val
 
 
+def collapse_last_dim(val: float, arr: np.ndarray) -> np.ndarray:
+    new_shape = list(arr.shape)
+    new_shape[-1] = 1
+    return np.ones(new_shape) * val
+
+
 @dataclass(frozen=True)
 class SimulatedPrices:
     log_returns: np.ndarray
@@ -37,8 +43,13 @@ def simulate_prices(init_price: float, log_returns: np.ndarray):
     S2 = S0 * exp(0) * exp(r1) * exp(r2) = S0 * exp(r1 + r2)
     ...
     '''
-    zeros = fill_first_n_dims(0.0, log_returns, log_returns.ndim-1)
-    prices = init_price * np.exp(np.concatenate([zeros, np.cumsum(log_returns)]))
+    zeros = collapse_last_dim(0.0, log_returns)
+    collapsed_index = log_returns.ndim - 1
+    prices = init_price * np.exp(
+        np.concatenate(
+            [zeros, np.cumsum(log_returns, axis=collapsed_index)], 
+            axis=collapsed_index)
+    )
     return SimulatedPrices(log_returns=log_returns, prices=prices)
 
 

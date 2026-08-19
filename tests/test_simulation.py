@@ -31,5 +31,101 @@ def test_fill_first_n_dims():
             simulation.fill_first_n_dims(2, sample, n_dim)
 
 
-def test_simulate_prices():
-    pass
+@pytest.mark.parametrize(
+    'sample, expected',
+    [
+        (
+            np.array([1, 2, 3, 4]), 
+            np.array([0]),
+        ),
+        (
+            np.array([[1, 2], [2, 3], [3, 4]]),
+            np.array([[0], [0], [0]]),
+        ),
+        (
+            np.array(
+                [
+                    [[1, 2, 3], [2, 3, 4]], 
+                    [[2, 3, 4], [3, 4, 5]], 
+                    [[3, 4, 5], [4, 5, 6]],
+                ]
+            ),
+            np.array(
+                [
+                    [[0], [0]],
+                    [[0], [0]],
+                    [[0], [0]],
+                ]
+            ),
+        )
+    ]
+)
+def test_collapse_last_dimension(sample: np.ndarray, expected: np.ndarray):
+    collapsed = simulation.collapse_last_dim(0, sample) 
+    # print('testing collapse')
+    # print(expected)
+    # print(collapsed)   
+    np.testing.assert_allclose(expected, collapsed)
+
+
+@pytest.mark.parametrize(
+        'sample_log_returns, expected_log_returns',
+        [
+            (
+                np.array([0.01, 0.02, 0.03, 0.04]),
+                np.array([0, 0.01, 0.03, 0.06, 0.10]),
+            ),
+            (
+                np.array(
+                    [
+                        [0.01, 0.02, 0.03, 0.04], 
+                        [0.01, 0.03, 0.05, 0.07], 
+                        [-0.01, 0.01, 0.02, -0.03],
+                    ]
+                ),
+                np.array(
+                    [
+                        [0.0, 0.01, 0.03, 0.06, 0.10],
+                        [0.0, 0.01, 0.04, 0.09, 0.16],
+                        [0.0, -0.01, 0.0, 0.02, -0.01],
+                    ]
+                )
+            ),
+            (
+                np.array(
+                    [
+                        [
+                            [0.01, 0.02, 0.03, 0.04],
+                            [-0.01, -0.02, -0.03, -0.04],
+                        ],
+                        [
+                            [-0.01, 0.02, -0.03, 0.04],
+                            [0.01, -0.02, 0.03, -0.04],
+                        ],
+                    ]
+                ),
+                np.array(
+                    [
+                        [
+                            [0.0, 0.01, 0.03, 0.06, 0.10],
+                            [0.0, -0.01, -0.03, -0.06, -0.10],
+                        ],
+                        [
+                            [0.0, -0.01, 0.01, -0.02, 0.02],
+                            [0.0, 0.01, -0.01, 0.02, -0.02],
+                        ],
+                    ]
+                ),
+            )
+        ]
+)
+def test_simulate_prices(
+        sample_log_returns: np.ndarray,
+        expected_log_returns: np.ndarray
+):
+    init_price: float = 2
+    ret = simulation.simulate_prices(init_price, sample_log_returns)
+    expected = init_price * np.exp(expected_log_returns)
+    np.testing.assert_allclose(sample_log_returns, ret.log_returns)
+    np.testing.assert_allclose(expected, ret.prices)
+    
