@@ -1,4 +1,7 @@
-from genesis import simulation
+from genesis import (
+    simulation,
+    gbm,
+)
 import numpy as np
 import pytest
 
@@ -128,4 +131,33 @@ def test_simulate_prices(
     expected = init_price * np.exp(expected_log_returns)
     np.testing.assert_allclose(sample_log_returns, ret.log_returns)
     np.testing.assert_allclose(expected, ret.prices)
+
+
+def test_simulate_gbm():
+    params = gbm.GBMParameters(0.0, 1.0)
+    init_px = 100.0
+    rng = np.random.default_rng(9)
+    ret = simulation.simulate_gbm(params, init_px, (4, 3), 1.0, rng)
+
+    expected = simulation.SimulatedPrices(
+        log_returns=np.array(
+            [
+                [-1.30283694, -0.25715009, -2.15634543],
+                [ 0.15610488,  0.64345302, -0.952611  ],
+                [-0.06951425, -0.24906743, -0.89435206],
+                [-1.36240487, -2.53255243,  0.91042348],
+            ]
+        ),
+        prices=np.array(
+            [
+                [100.        ,  27.17597334,  21.01387969,   2.43230102],
+                [100.        , 116.89487932, 222.45572349,  85.8084154 ],
+                [100.        ,  93.28468361,  72.71796756,  29.73237279],
+                [100.        ,  25.60442839,   2.03442433,   5.05630701]
+            ]
+        ),
+    )
+
+    np.testing.assert_allclose(ret.log_returns, expected.log_returns)
+    np.testing.assert_allclose(ret.prices, expected.prices)
     

@@ -44,7 +44,7 @@ def simulate_prices(init_price: float, log_returns: np.ndarray):
     ...
     '''
     zeros = collapse_last_dim(0.0, log_returns)
-    collapsed_index = log_returns.ndim - 1
+    collapsed_index = log_returns.ndim - 1 # last index
     prices = init_price * np.exp(
         np.concatenate(
             [zeros, np.cumsum(log_returns, axis=collapsed_index)], 
